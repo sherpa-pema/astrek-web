@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SathiGPT</title>
+  <meta name="description" content="SathiGPT" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --page-bg: #e9e9e9;
+      --page-text: #000000;
+      --bg: #f5efe4;
+      --bg-soft: #fbf8f1;
+      --surface: rgba(255, 250, 242, 0.78);
+      --surface-strong: #fffdf8;
+      --text: #171411;
+      --muted: #675f56;
+      --line: rgba(23, 20, 17, 0.12);
+      --accent: #c8642a;
+      --accent-dark: #9c4212;
+      --accent-soft: rgba(200, 100, 42, 0.14);
+      --success: #1b8f57;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: var(--page-bg);
+      color: var(--page-text);
+      overflow-x: hidden;
+    }
+
+    .landing {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .landing-title {
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 700;
+      color: #000;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    #sathi-btn {
+      position: fixed;
+      right: 24px;
+      bottom: calc(24px + env(safe-area-inset-bottom));
+      width: 66px;
+      height: 66px;
+      border: 2px solid var(--accent-dark);
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff9f2;
+      box-shadow: 0 24px 48px rgba(23, 20, 17, 0.18);
+      cursor: pointer;
+      z-index: 1000;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    #sathi-btn:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 30px 56px rgba(23, 20, 17, 0.34);
+    }
+
+    #sathi-widget {
+      position: fixed;
+      right: 24px;
+      bottom: calc(102px + env(safe-area-inset-bottom));
+      width: min(400px, calc(100vw - 24px));
+      height: min(78dvh, 700px);
+      display: none;
+      flex-direction: column;
+      background: #fffcf7;
+      border: 1px solid rgba(23, 20, 17, 0.08);
+      border-radius: 30px;
+      overflow: hidden;
+      box-shadow: 0 34px 90px rgba(23, 20, 17, 0.18);
+      z-index: 1000;
+    }
+
+    @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      #sathi-widget {
+        background: rgba(255, 252, 247, 0.94);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+    }
+
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      #sathi-widget {
+        background: #fffcf7;
+      }
+    }
+
+    .widget-top {
+      padding: 18px 18px 16px;
+      border-bottom: 1px solid rgba(23, 20, 17, 0.08);
+      background:
+        radial-gradient(circle at top right, rgba(200, 100, 42, 0.14), transparent 22%),
+        linear-gradient(180deg, rgba(251, 248, 241, 0.98), rgba(255, 255, 255, 0.92));
+    }
+
+    .widget-top-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .widget-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .widget-title strong {
+      display: block;
+      letter-spacing: -0.04em;
+      margin-bottom: 3px;
+    }
+
+    .widget-title span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--success);
+      font-size: 13px;
+    }
+
+    .widget-title span::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(27, 143, 87, 0.12);
+    }
+
+    .widget-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(23, 20, 17, 0.06);
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(23, 20, 17, 0.1);
+      color: var(--text);
+    }
+
+    .widget-subcopy {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+      margin-bottom: 14px;
+    }
+
+    .suggestion-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .suggestion-btn {
+      border: 1px solid rgba(23, 20, 17, 0.08);
+      background: rgba(255,255,255,0.88);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .suggestion-btn:hover {
+      background: rgba(200, 100, 42, 0.08);
+      border-color: rgba(200, 100, 42, 0.24);
+      transform: translateY(-1px);
+    }
+
+    #sathi-msgs {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background:
+        radial-gradient(circle at bottom left, rgba(200,100,42,0.08), transparent 28%),
+        linear-gradient(180deg, rgba(247, 241, 231, 0.68) 0%, rgba(255,255,255,0.2) 100%);
+    }
+
+    #sathi-msgs::-webkit-scrollbar { width: 6px; }
+    #sathi-msgs::-webkit-scrollbar-track { background: transparent; }
+    #sathi-msgs::-webkit-scrollbar-thumb {
+      background: rgba(23, 20, 17, 0.12);
+      border-radius: 999px;
+    }
+
+    .msg {
+      max-width: 88%;
+      padding: 12px 14px;
+      border-radius: 18px;
+      line-height: 1.65;
+      font-size: 14px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: normal;
+      animation: fadeUp 0.2s ease;
+    }
+
+    .msg.bot {
+      align-self: flex-start;
+      background: #fffdfa;
+      border: 1px solid rgba(23, 20, 17, 0.08);
+      color: var(--text);
+      border-bottom-left-radius: 6px;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--text);
+      color: #fff8ee;
+      border-bottom-right-radius: 6px;
+    }
+
+    .msg.typing {
+      color: var(--muted);
+      font-style: normal;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 68px;
+    }
+
+    .typing-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .typing-dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(23, 20, 17, 0.38);
+      animation: typingPulse 0.9s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    .msg.error {
+      border-color: rgba(220, 38, 38, 0.18);
+      background: rgba(254, 242, 242, 0.92);
+      color: #991b1b;
+    }
+
+    .composer {
+      padding: 14px;
+      border-top: 1px solid rgba(23, 20, 17, 0.08);
+      background: rgba(255,255,255,0.96);
+    }
+
+    .composer-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    #sathi-input {
+      flex: 1;
+      min-height: 46px;
+      max-height: 120px;
+      resize: none;
+      border: 1px solid rgba(23, 20, 17, 0.1);
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: var(--bg-soft);
+      color: var(--text);
+      outline: none;
+      line-height: 1.55;
+      font-size: 16px;
+    }
+
+    #sathi-input:focus {
+      background: #ffffff;
+      border-color: rgba(200, 100, 42, 0.28);
+    }
+
+    #sathi-send {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff9f2;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+
+    #sathi-send:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+    }
+
+    .composer-meta {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes typingPulse {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+      40% { transform: translateY(-2px); opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #sathi-widget {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: #fffcf7;
+      }
+    }
+
+    @media (max-width: 560px) {
+      #sathi-widget {
+        right: 10px;
+        bottom: calc(84px + env(safe-area-inset-bottom));
+        width: calc(100vw - 20px);
+        height: min(78dvh, 700px);
+        border-radius: 24px;
+      }
+
+      #sathi-btn {
+        right: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+      }
+
+      .widget-top,
+      #sathi-msgs,
+      .composer { padding-left: 14px; padding-right: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="landing" aria-label="SathiGPT landing page">
+    <h1 class="landing-title">SathiGPT</h1>
+  </main>
+
+  <button id="sathi-btn" type="button" onclick="toggleChat()" title="Chat with Sathi" aria-label="Open chat">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  </button>
+
+  <aside id="sathi-widget" aria-label="Sathi GPT chat widget">
+    <div class="widget-top">
+      <div class="widget-top-row">
+        <div class="widget-title">
+          <strong>Sathi GPT</strong>
+          <span>Online and ready</span>
+        </div>
+        <div class="widget-actions">
+          <button class="icon-btn" type="button" onclick="toggleChat()" title="Close chat" aria-label="Close chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6L6 18"></path>
+              <path d="M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="widget-subcopy">Ask about pricing, services, bookings, support, or how this fits your website.</p>
+      <div class="suggestion-row" id="suggestions">
+        <button class="suggestion-btn" type="button" data-prompt="What can Sathi GPT do for a travel company website?">Travel use case</button>
+        <button class="suggestion-btn" type="button" data-prompt="How quickly can this be set up on our website?">Setup timeline</button>
+        <button class="suggestion-btn" type="button" data-prompt="Can this capture leads and booking requests?">Lead capture</button>
+      </div>
+    </div>
+
+    <div id="sathi-msgs"></div>
+
+    <div class="composer">
+      <div class="composer-row">
+        <textarea id="sathi-input" placeholder="Write your message..." rows="1"></textarea>
+        <button id="sathi-send" type="button" onclick="sendMsg()" aria-label="Send message">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+      <div class="composer-meta">
+        <span>Your chat stays in this browser for demo continuity.</span>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    const WEBHOOK_URL = 'https://n8nchat.nayanepal.online/webhook/078cb6b6-a4ad-46fc-85e1-ade174ada95d/chat';
+    const STORAGE_KEY = 'sathi-gpt-chat-history';
+    const SESSION_KEY = 'sathi-gpt-session-id';
+    const DEFAULT_MESSAGES = [
+      {
+        role: 'bot',
+        text: "Hi, I'm Sathi. Ask me anything about services, support, bookings, or how this chat can help your website."
+      }
+    ];
+
+    const widget = document.getElementById('sathi-widget');
+    const messagesEl = document.getElementById('sathi-msgs');
+    const inputEl = document.getElementById('sathi-input');
+    const sendBtn = document.getElementById('sathi-send');
+    const statusEl = document.getElementById('composer-status');
+    const suggestionsEl = document.getElementById('suggestions');
+
+    let isSending = false;
+    let messages = loadMessages();
+    let sessionId = getOrCreateSessionId();
+
+    renderMessages();
+    autoResizeInput();
+
+    function toggleChat() {
+      const open = widget.style.display === 'flex';
+      widget.style.display = open ? 'none' : 'flex';
+      if (!open) {
+        inputEl.focus();
+        scrollToBottom();
+      }
+    }
+
+    function openChat() {
+      widget.style.display = 'flex';
+      inputEl.focus();
+      scrollToBottom();
+    }
+
+    function createSessionId() {
+      const host = (window.location.hostname || 'unknown-host').replace(/[^a-zA-Z0-9-]/g, '-');
+      const userAgent = navigator.userAgent || 'unknown-agent';
+      let fingerprint = 0;
+      const source = `${host}|${userAgent}`;
+      for (let i = 0; i < source.length; i += 1) {
+        fingerprint = ((fingerprint << 5) - fingerprint + source.charCodeAt(i)) | 0;
+      }
+      const created = `sathi-${host}-${Math.abs(fingerprint)}`;
+      try {
+        localStorage.setItem(SESSION_KEY, created);
+      } catch {}
+      return created;
+    }
+
+    function getStoredSessionId() {
+      try {
+        return localStorage.getItem(SESSION_KEY);
+      } catch {
+        return null;
+      }
+    }
+
+    function getSessionIdFromMessages() {
+      const firstUserMessage = messages.find(message => message.role === 'user' && typeof message.sessionId === 'string' && message.sessionId.trim());
+      return firstUserMessage?.sessionId || null;
+    }
+
+    function getOrCreateSessionId() {
+      const stored = getStoredSessionId();
+      if (stored) return stored;
+
+      const messageSession = getSessionIdFromMessages();
+      if (messageSession) {
+        try {
+          localStorage.setItem(SESSION_KEY, messageSession);
+        } catch {}
+        return messageSession;
+      }
+
+      return createSessionId();
+    }
+
+    function loadMessages() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [...DEFAULT_MESSAGES];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || !parsed.length) return [...DEFAULT_MESSAGES];
+        return parsed
+          .filter(item => item && typeof item.text === 'string' && (item.role === 'user' || item.role === 'bot' || item.role === 'error'))
+          .map(item => ({
+            role: item.role,
+            text: item.text,
+            ...(typeof item.sessionId === 'string' ? { sessionId: item.sessionId } : {})
+          }));
+      } catch {
+        return [...DEFAULT_MESSAGES];
+      }
+    }
+
+    function saveMessages() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+
+    function renderMessages() {
+      messagesEl.innerHTML = '';
+      messages.forEach(addMessageElement);
+      scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function linkifyText(text) {
+      const escaped = escapeHtml(text);
+      const urlRegex = /(https?:\/\/[^\s<]+)/g;
+      return escaped.replace(urlRegex, url => {
+        const cleanUrl = url.replace(/[),.!?]+$/, match => {
+          return match;
+        });
+        const trailing = url.slice(cleanUrl.length);
+        return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${trailing}`;
+      }).replace(/\n/g, '<br>');
+    }
+
+    function addMessageElement(message) {
+      const div = document.createElement('div');
+      div.className = `msg ${message.role === 'user' ? 'user' : message.role === 'error' ? 'bot error' : 'bot'}`;
+      div.innerHTML = linkifyText(message.text);
+      messagesEl.appendChild(div);
+    }
+
+    function appendMessage(role, text, extra = {}) {
+      const message = { role, text, ...extra };
+      messages.push(message);
+      saveMessages();
+      addMessageElement(message);
+      scrollToBottom();
+    }
+
+    function addTyping() {
+      const div = document.createElement('div');
+      div.className = 'msg bot typing';
+      div.id = 'sathi-typing';
+      div.setAttribute('aria-label', 'Sathi is typing');
+      div.innerHTML = '<span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
+      messagesEl.appendChild(div);
+      scrollToBottom();
+    }
+
+    function removeTyping() {
+      document.getElementById('sathi-typing')?.remove();
+    }
+
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setSendingState(sending) {
+      isSending = sending;
+      sendBtn.disabled = sending;
+      inputEl.disabled = sending;
+      suggestionsEl.querySelectorAll('button').forEach(btn => {
+        btn.disabled = sending;
+      });
+      if (statusEl) {
+        statusEl.textContent = sending ? 'Sending...' : 'Ready';
+      }
+    }
+
+    function autoResizeInput() {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = `${Math.min(inputEl.scrollHeight, 120)}px`;
+    }
+
+    function normalizeReply(data) {
+      if (!data) return '';
+      if (typeof data === 'string') return data;
+      if (typeof data.output === 'string') return data.output;
+      if (typeof data.reply === 'string') return data.reply;
+      if (typeof data.message === 'string') return data.message;
+      if (typeof data.text === 'string') return data.text;
+      if (Array.isArray(data.output)) return data.output.join('\n');
+      if (Array.isArray(data.messages)) {
+        return data.messages
+          .map(item => (typeof item === 'string' ? item : item?.text || item?.content || ''))
+          .filter(Boolean)
+          .join('\n');
+      }
+      return '';
+    }
+
+    async function sendMsg(prefillText) {
+      if (isSending) return;
+
+      const text = typeof prefillText === 'string' ? prefillText.trim() : inputEl.value.trim();
+      if (!text) return;
+
+      appendMessage('user', text, { sessionId });
+      inputEl.value = '';
+      autoResizeInput();
+      addTyping();
+      setSendingState(true);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatInput: text,
+            sessionId,
+            source: 'sathi-webapp',
+            domain: window.location.hostname
+          }),
+          signal: controller.signal
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        const data = contentType.includes('application/json') ? await response.json() : await response.text();
+
+        if (!response.ok) {
+          throw new Error(typeof data === 'string' ? data : `Request failed with status ${response.status}`);
+        }
+
+        const reply = normalizeReply(data) || 'Sorry, I could not understand that yet.';
+        removeTyping();
+        appendMessage('bot', reply);
+      } catch (error) {
+        removeTyping();
+        appendMessage(
+          'error',
+          error.name === 'AbortError'
+            ? 'The request took too long. Please try again.'
+            : 'Something went wrong while reaching Sathi. Please try again.'
+        );
+      } finally {
+        clearTimeout(timeoutId);
+        setSendingState(false);
+        inputEl.focus();
+      }
+    }
+
+    function resetChat() {
+      messages = [...DEFAULT_MESSAGES];
+      saveMessages();
+      sessionId = createSessionId();
+      renderMessages();
+      if (statusEl) {
+        statusEl.textContent = 'Chat reset';
+        setTimeout(() => {
+          if (!isSending) statusEl.textContent = 'Ready';
+        }, 1200);
+      }
+      inputEl.focus();
+    }
+
+    inputEl.addEventListener('input', autoResizeInput);
+
+    inputEl.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMsg();
+      }
+    });
+
+    suggestionsEl.addEventListener('click', event => {
+      const button = event.target.closest('[data-prompt]');
+      if (!button) return;
+      sendMsg(button.dataset.prompt || '');
+    });
+  </script>
+</body>
+</html>
